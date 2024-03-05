@@ -5,7 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	_ "time" // for simulating slow network
+	"time"
 )
 
 type Film struct {
@@ -14,8 +14,9 @@ type Film struct {
 }
 
 func main() {
-	fmt.Println("Hello, World!")
+	fmt.Println("Go app...")
 
+	// handler function #1 - returns the index.html template, with film data
 	h1 := func(w http.ResponseWriter, r *http.Request) {
 		tmpl := template.Must(template.ParseFiles("index.html"))
 		films := map[string][]Film{
@@ -28,43 +29,22 @@ func main() {
 		tmpl.Execute(w, films)
 	}
 
+	// handler function #2 - returns the template block with the newly added film, as an HTMX response
 	h2 := func(w http.ResponseWriter, r *http.Request) {
-		// time.Sleep(2 * time.Second)  // simulate a slow network
+		time.Sleep(1 * time.Second)
 		title := r.PostFormValue("title")
 		director := r.PostFormValue("director")
-
-		log.Print("HTMX request received")
-		log.Printf("Received title: %s\n", title)
-		log.Printf("Received director: %s\n", director)
-
-		// define a template with placeholders for dynamic content
-		// TODO: check out how to use template fragments in golang
-		tmpl, err := template.New("movie").Parse(
-			"<li class='list-group-item bg-primary text-white'>{{ .Title }} - {{ .Director }}</li>")
-
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-
-		// execute the template with the dynamic content
-		data := struct {
-			Title    string
-			Director string
-		}{
-			Title:    title,
-			Director: director,
-		}
-
-		err = tmpl.Execute(w, data)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
+		// htmlStr := fmt.Sprintf("<li class='list-group-item bg-primary text-white'>%s - %s</li>", title, director)
+		// tmpl, _ := template.New("t").Parse(htmlStr)
+		tmpl := template.Must(template.ParseFiles("index.html"))
+		tmpl.ExecuteTemplate(w, "film-list-element", Film{Title: title, Director: director})
 	}
 
+	// define handlers
 	http.HandleFunc("/", h1)
 	http.HandleFunc("/add-film/", h2)
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8000", nil))
+
 }
+
